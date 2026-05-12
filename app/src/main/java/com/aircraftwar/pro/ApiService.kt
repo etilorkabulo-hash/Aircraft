@@ -13,9 +13,9 @@ class ApiService {
     private val baseUrl = "https://aircraft-war-server.onrender.com"
 
     /**
-     * 👤 Créer un joueur
+     * 🔐 REGISTER
      */
-    fun createPlayer(name: String, callback: (Long) -> Unit) {
+    fun register(name: String, callback: (String) -> Unit) {
 
         val json = JSONObject()
         json.put("name", name)
@@ -24,7 +24,7 @@ class ApiService {
             .toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
-            .url("$baseUrl/player")
+            .url("$baseUrl/register")
             .post(body)
             .build()
 
@@ -40,18 +40,58 @@ class ApiService {
 
                 if (result != null) {
                     val jsonResponse = JSONObject(result)
-                    val id = jsonResponse.getLong("id")
+                    val id = jsonResponse.getString("id")
 
                     callback(id)
                 }
+
+                response.close()
             }
         })
     }
 
     /**
-     * 🏆 Envoyer score
+     * 🔐 LOGIN
      */
-    fun sendScore(id: Long, score: Int) {
+    fun login(name: String, callback: (String) -> Unit) {
+
+        val json = JSONObject()
+        json.put("name", name)
+
+        val body = json.toString()
+            .toRequestBody("application/json".toMediaType())
+
+        val request = Request.Builder()
+            .url("$baseUrl/login")
+            .post(body)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+
+                val result = response.body?.string()
+
+                if (result != null) {
+                    val jsonResponse = JSONObject(result)
+                    val id = jsonResponse.getString("id")
+
+                    callback(id)
+                }
+
+                response.close()
+            }
+        })
+    }
+
+    /**
+     * 🏆 SCORE
+     */
+    fun sendScore(id: String, score: Int) {
 
         val json = JSONObject()
         json.put("id", id)
@@ -78,7 +118,7 @@ class ApiService {
     }
 
     /**
-     * 📊 Leaderboard
+     * 📊 LEADERBOARD
      */
     fun getLeaderboard(callback: (String) -> Unit) {
 
