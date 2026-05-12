@@ -14,7 +14,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     // 🔗 SERVEUR
     lateinit var api: ApiService
-    var playerId: Long = -1
+    var playerId: String = ""
 
     // 🏆 SCORE LOCAL
     private var score: Int = 0
@@ -30,7 +30,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     /**
      * Initialise connexion serveur depuis MainActivity
      */
-    fun init(apiService: ApiService, id: Long) {
+    fun init(apiService: ApiService, id: String) {
         api = apiService
         playerId = id
     }
@@ -76,7 +76,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
      */
     fun gameOver() {
 
-        if (::api.isInitialized && playerId != -1L) {
+        if (::api.isInitialized && playerId.isNotEmpty()) {
             api.sendScore(playerId, score)
         }
     }
@@ -103,7 +103,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                             // 🔄 UPDATE GAME
                             gameMap.update()
 
-                            // 🏆 SCORE (exemple simple)
+                            // 🏆 SCORE
                             score += 1
 
                             // 🎨 DRAW
