@@ -12,12 +12,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val gameMap = GameMap(context)
     private lateinit var gameThread: GameThread
 
-    // 🔗 SERVEUR
-    lateinit var api: ApiService
-    var playerId: String = ""
+    // 🔗 SERVEUR (sécurisé)
+    private var api: ApiService? = null
+    private var playerId: String? = null
 
-    // 🏆 SCORE LOCAL
+    // 🏆 SCORE
     private var score: Int = 0
+    private var frameCounter = 0
 
     @Volatile
     private var isRunning = false
@@ -28,7 +29,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     /**
-     * Initialise connexion serveur depuis MainActivity
+     * Initialise connexion serveur
      */
     fun init(apiService: ApiService, id: String) {
         api = apiService
@@ -45,6 +46,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         isRunning = false
+        gameThread.interrupt()
 
         try {
             gameThread.join()
@@ -53,36 +55,41 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
     }
 
-    fun render(canvas: Canvas) {
+    /**
+     * DRAW
+     */
+    private fun render(canvas: Canvas) {
         canvas.drawColor(Color.BLACK)
         gameMap.draw(canvas)
     }
 
+    /**
+     * TOUCH INPUT
+     */
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         event ?: return false
 
-        when (event.action) {
-            MotionEvent.ACTION_MOVE,
-            MotionEvent.ACTION_DOWN -> {
-                gameMap.movePlayer(event.x.toInt(), event.y.toInt())
-            }
+        if (event.action == MotionEvent.ACTION_MOVE ||
+            event.action == MotionEvent.ACTION_DOWN
+        ) {
+            gameMap.movePlayer(event.x.toInt(), event.y.toInt())
         }
 
         return true
     }
 
     /**
-     * À appeler quand joueur perd
+     * GAME OVER
      */
     fun gameOver() {
+        val service = api ?: return
+        val id = playerId ?: return
 
-        if (::api.isInitialized && playerId.isNotEmpty()) {
-            api.sendScore(playerId, score)
-        }
+        service.sendScore(id, score)
     }
 
     /**
-     * Thread principal du jeu
+     * THREAD PRINCIPAL
      */
     private inner class GameThread(
         private val surfaceHolder: SurfaceHolder
@@ -90,27 +97,33 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         override fun run() {
 
-            while (isRunning) {
+            val frameTime = 1000L / 60L
+
+            while (isRunning && !isInterrupted) {
+
                 var canvas: Canvas? = null
 
                 try {
-                    canvas = surfaceHolder.lockCanvas()
+                    canvas = surfaceHolder.lockCanvas() ?: continue
 
                     synchronized(surfaceHolder) {
 
-                        if (canvas != null) {
+                        // 🔄 UPDATE GAME
+                        gameMap.update()
 
-                            // 🔄 UPDATE GAME
-                            gameMap.update()
-
-                            // 🏆 SCORE
-                            score += 1
-
-                            // 🎨 DRAW
-                            render(canvas)
+                        // 🏆 SCORE (1 point / seconde)
+                        frameCounter++
+                        if (frameCounter >= 60) {
+                            score++
+                            frameCounter = 0
                         }
+
+                        // 🎨 DRAW
+                        render(canvas)
                     }
 
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 } finally {
                     canvas?.let {
                         surfaceHolder.unlockCanvasAndPost(it)
@@ -118,9 +131,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 }
 
                 try {
-                    sleep(16) // ~60 FPS
+                    sleep(frameTime)
                 } catch (e: InterruptedException) {
-                    e.printStackTrace()
+                    break
                 }
             }
         }
