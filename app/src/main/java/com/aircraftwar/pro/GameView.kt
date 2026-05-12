@@ -8,23 +8,31 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
+
     private val gameMap = GameMap(context)
     private lateinit var gameThread: GameThread
-    private var isRunning = true
+
+    @Volatile
+    private var isRunning = false
 
     init {
         holder.addCallback(this)
+        isFocusable = true
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
-        gameThread = GameThread(holder, this)
+        isRunning = true
+        gameThread = GameThread(holder)
         gameThread.start()
     }
 
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+        // optionnel : gérer resize écran
+    }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         isRunning = false
+
         try {
             gameThread.join()
         } catch (e: InterruptedException) {
@@ -32,38 +40,59 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
     }
 
-    fun draw(canvas: Canvas) {
+    /**
+     * Rendu du jeu (remplace draw())
+     */
+    fun render(canvas: Canvas) {
         canvas.drawColor(Color.BLACK)
         gameMap.draw(canvas)
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
-        event?.let {
-            when (it.action) {
-                MotionEvent.ACTION_MOVE -> {
-                    gameMap.movePlayer(it.x.toInt(), it.y.toInt())
-                }
+        event ?: return false
+
+        when (event.action) {
+            MotionEvent.ACTION_MOVE,
+            MotionEvent.ACTION_DOWN -> {
+                gameMap.movePlayer(event.x.toInt(), event.y.toInt())
             }
         }
+
         return true
     }
 
+    /**
+     * Thread principal du jeu
+     */
     private inner class GameThread(
-        private val surfaceHolder: SurfaceHolder,
-        private val gameView: GameView
+        private val surfaceHolder: SurfaceHolder
     ) : Thread() {
+
         override fun run() {
             while (isRunning) {
-                val canvas = surfaceHolder.lockCanvas()
-                if (canvas != null) {
-                    try {
-                        gameView.draw(canvas)
-                        gameMap.update()
-                    } finally {
+                var canvas: Canvas? = null
+
+                try {
+                    canvas = surfaceHolder.lockCanvas()
+
+                    synchronized(surfaceHolder) {
+                        if (canvas != null) {
+                            gameMap.update()
+                            render(canvas)
+                        }
+                    }
+
+                } finally {
+                    if (canvas != null) {
                         surfaceHolder.unlockCanvasAndPost(canvas)
                     }
                 }
-                Thread.sleep(16)
+
+                try {
+                    sleep(16) // ~60 FPS
+                } catch (e: InterruptedException) {
+                    e.printStackTrace()
+                }
             }
         }
     }
