@@ -19,9 +19,11 @@ class LoginActivity : AppCompatActivity() {
         val loginBtn = findViewById<Button>(R.id.loginBtn)
 
         registerBtn.setOnClickListener {
+
             val name = nameInput.text.toString()
 
             api.register(name) { id ->
+
                 runOnUiThread {
                     startGame(id)
                 }
@@ -29,9 +31,11 @@ class LoginActivity : AppCompatActivity() {
         }
 
         loginBtn.setOnClickListener {
+
             val name = nameInput.text.toString()
 
             api.login(name) { id ->
+
                 runOnUiThread {
                     startGame(id)
                 }
@@ -39,9 +43,13 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    private fun startGame(playerId: Long) {
+    /**
+     * 🎮 Lancer le jeu avec ID joueur
+     */
+    private fun startGame(playerId: String) {
 
         val intent = Intent(this, GameActivity::class.java)
+
         intent.putExtra("playerId", playerId)
 
         startActivity(intent)
