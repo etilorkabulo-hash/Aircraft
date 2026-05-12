@@ -10,6 +10,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 🧠 CRASH HANDLER (IMPORTANT)
+        Thread.setDefaultUncaughtExceptionHandler(
+            CrashHandler(applicationContext)
+        )
+
         setContentView(R.layout.activity_main)
 
         val playBtn = findViewById<Button>(R.id.playBtn)
