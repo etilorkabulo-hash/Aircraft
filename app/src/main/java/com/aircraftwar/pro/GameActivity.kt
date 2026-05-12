@@ -16,7 +16,8 @@ class GameActivity : AppCompatActivity() {
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         )
 
-        val playerId = intent.getLongExtra("playerId", -1)
+        // ✅ CORRECTION ICI
+        val playerId = intent.getStringExtra("playerId") ?: ""
 
         val gameView = GameView(this)
 
