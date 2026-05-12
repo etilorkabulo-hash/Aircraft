@@ -1,6 +1,8 @@
 package com.aircraftwar.pro
 
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
 
@@ -8,22 +10,18 @@ class ApiService {
 
     private val client = OkHttpClient()
 
-    // 🔗 CHANGE ICI avec ton lien Render
     private val baseUrl = "https://aircraft-war-server.onrender.com"
 
     /**
      * 👤 Créer un joueur
-     * Retourne l'ID unique du serveur
      */
     fun createPlayer(name: String, callback: (Long) -> Unit) {
 
         val json = JSONObject()
         json.put("name", name)
 
-        val body = RequestBody.create(
-            MediaType.get("application/json"),
-            json.toString()
-        )
+        val body = json.toString()
+            .toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
             .url("$baseUrl/player")
@@ -41,7 +39,6 @@ class ApiService {
                 val result = response.body?.string()
 
                 if (result != null) {
-
                     val jsonResponse = JSONObject(result)
                     val id = jsonResponse.getLong("id")
 
@@ -52,7 +49,7 @@ class ApiService {
     }
 
     /**
-     * 🏆 Envoyer score au serveur
+     * 🏆 Envoyer score
      */
     fun sendScore(id: Long, score: Int) {
 
@@ -60,10 +57,8 @@ class ApiService {
         json.put("id", id)
         json.put("score", score)
 
-        val body = RequestBody.create(
-            MediaType.get("application/json"),
-            json.toString()
-        )
+        val body = json.toString()
+            .toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
             .url("$baseUrl/score")
@@ -77,13 +72,13 @@ class ApiService {
             }
 
             override fun onResponse(call: Call, response: Response) {
-                // rien à faire ici pour l'instant
+                response.close()
             }
         })
     }
 
     /**
-     * 📊 Récupérer leaderboard (optionnel mais utile)
+     * 📊 Leaderboard
      */
     fun getLeaderboard(callback: (String) -> Unit) {
 
@@ -101,6 +96,8 @@ class ApiService {
             override fun onResponse(call: Call, response: Response) {
 
                 val result = response.body?.string()
+                response.close()
+
                 callback(result ?: "[]")
             }
         })
