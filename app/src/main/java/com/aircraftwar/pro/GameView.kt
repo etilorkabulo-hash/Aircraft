@@ -12,6 +12,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val gameMap = GameMap(context)
     private lateinit var gameThread: GameThread
 
+    // 🔗 SERVEUR
+    lateinit var api: ApiService
+    var playerId: Long = -1
+
+    // 🏆 SCORE LOCAL
+    private var score: Int = 0
+
     @Volatile
     private var isRunning = false
 
@@ -20,15 +27,21 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         isFocusable = true
     }
 
+    /**
+     * Initialise connexion serveur depuis MainActivity
+     */
+    fun init(apiService: ApiService, id: Long) {
+        api = apiService
+        playerId = id
+    }
+
     override fun surfaceCreated(holder: SurfaceHolder) {
         isRunning = true
         gameThread = GameThread(holder)
         gameThread.start()
     }
 
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        // optionnel : gérer resize écran
-    }
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         isRunning = false
@@ -40,9 +53,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
     }
 
-    /**
-     * Rendu du jeu (remplace draw())
-     */
     fun render(canvas: Canvas) {
         canvas.drawColor(Color.BLACK)
         gameMap.draw(canvas)
@@ -62,6 +72,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     /**
+     * À appeler quand joueur perd
+     */
+    fun gameOver() {
+
+        if (::api.isInitialized && playerId != -1L) {
+            api.sendScore(playerId, score)
+        }
+    }
+
+    /**
      * Thread principal du jeu
      */
     private inner class GameThread(
@@ -69,6 +89,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     ) : Thread() {
 
         override fun run() {
+
             while (isRunning) {
                 var canvas: Canvas? = null
 
@@ -76,15 +97,23 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     canvas = surfaceHolder.lockCanvas()
 
                     synchronized(surfaceHolder) {
+
                         if (canvas != null) {
+
+                            // 🔄 UPDATE GAME
                             gameMap.update()
+
+                            // 🏆 SCORE (exemple simple)
+                            score += 1
+
+                            // 🎨 DRAW
                             render(canvas)
                         }
                     }
 
                 } finally {
-                    if (canvas != null) {
-                        surfaceHolder.unlockCanvasAndPost(canvas)
+                    canvas?.let {
+                        surfaceHolder.unlockCanvasAndPost(it)
                     }
                 }
 
