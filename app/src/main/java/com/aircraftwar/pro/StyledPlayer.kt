@@ -1,61 +1,34 @@
 package com.aircraftwar.pro
 
-import android.content.Context
 import android.graphics.Canvas
-import kotlin.random.Random
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
 
-class GameMap(private val context: Context) {
-    private val player = StyledPlayer(500, 1000)
-    private val enemies = mutableListOf<StyledEnemy>()
-    private val bullets = mutableListOf<StyledBullet>()
-    private var spawnTimer = 0
-    private val screenWidth = 1080
-    private val screenHeight = 1920
-
-    fun movePlayer(x: Int, y: Int) {
-        player.x = x.coerceIn(0, screenWidth)
-        player.y = y.coerceIn(0, screenHeight)
-    }
-
-    fun update() {
-        spawnTimer++
-        if (spawnTimer > 30) {
-            enemies.add(StyledEnemy(Random.nextInt(screenWidth), 0))
-            spawnTimer = 0
-        }
-
-        enemies.forEach { it.update() }
-        enemies.removeAll { it.y > screenHeight }
-
-        bullets.forEach { it.update() }
-        bullets.removeAll { it.y < 0 }
-
-        detectCollisions()
-
-        if (Random.nextFloat() < 0.1f) {
-            bullets.add(StyledBullet(player.x, player.y))
-        }
-    }
-
-    private fun detectCollisions() {
-        val bulletIterator = bullets.iterator()
-        while (bulletIterator.hasNext()) {
-            val bullet = bulletIterator.next()
-            val enemyIterator = enemies.iterator()
-            while (enemyIterator.hasNext()) {
-                val enemy = enemyIterator.next()
-                if (bullet.collidesWith(enemy)) {
-                    bulletIterator.remove()
-                    enemyIterator.remove()
-                    break
-                }
-            }
-        }
+class StyledPlayer(var x: Int, var y: Int) {
+    private val width = 60
+    private val height = 80
+    private val paint = Paint().apply {
+        color = Color.GREEN
+        style = Paint.Style.FILL
     }
 
     fun draw(canvas: Canvas) {
-        player.draw(canvas)
-        enemies.forEach { it.draw(canvas) }
-        bullets.forEach { it.draw(canvas) }
+        val path = Path()
+        path.moveTo(x.toFloat(), (y - height / 2).toFloat())
+        path.lineTo((x - width / 2).toFloat(), (y + height / 2).toFloat())
+        path.lineTo((x + width / 2).toFloat(), (y + height / 2).toFloat())
+        path.close()
+        canvas.drawPath(path, paint)
+
+        val cockpitPaint = Paint().apply {
+            color = Color.YELLOW
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(x.toFloat(), (y - height / 4).toFloat(), 5f, cockpitPaint)
+    }
+
+    fun getBounds(): FloatArray {
+        return floatArrayOf(x - width / 2f, y - height / 2f, x + width / 2f, y + height / 2f)
     }
 }
