@@ -22,7 +22,6 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var apiService: ApiService
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_login)
@@ -34,7 +33,6 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun initializeViews() {
-
         usernameInput = findViewById(R.id.username_input)
         registerBtn = findViewById(R.id.register_btn)
         loginBtn = findViewById(R.id.login_btn)
@@ -42,7 +40,6 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-
         registerBtn.setOnClickListener {
             handleAuth(isRegister = true)
         }
@@ -54,15 +51,10 @@ class LoginActivity : AppCompatActivity() {
 
     private fun handleAuth(isRegister: Boolean) {
 
-        val username =
-            usernameInput.text.toString().trim()
+        val username = usernameInput.text.toString().trim()
 
         if (!validateInput(username)) {
-
-            showErrorMessage(
-                "Pseudo invalide (3 à 20 caractères)"
-            )
-
+            showErrorMessage("Pseudo invalide (3 à 20 caractères)")
             return
         }
 
@@ -70,12 +62,14 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun validateInput(username: String): Boolean {
-
         return !TextUtils.isEmpty(username)
                 && username.length >= 3
                 && username.length <= 20
     }
 
+    // =========================
+    // 🔥 CORRECTION IMPORTANTE ICI
+    // =========================
     private fun performAuth(
         username: String,
         isRegister: Boolean
@@ -83,49 +77,44 @@ class LoginActivity : AppCompatActivity() {
 
         showLoading(true)
 
-        CoroutineScope(Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.IO).launch {
 
             try {
 
-                val response =
-                    apiService.register(username) // OK pour l'instant (backend simple)
+                val response = apiService.register(username)
 
-                if (response != null) {
+                launch(Dispatchers.Main) {
 
-                    saveUserData(response)
+                    if (response != null) {
 
-                    showSuccess(isRegister)
+                        saveUserData(response)
+                        showSuccess(isRegister)
+                        navigateToMenu()
 
-                    navigateToMenu()
+                    } else {
+                        showErrorMessage("Serveur: réponse vide")
+                    }
 
-                } else {
-
-                    showErrorMessage(
-                        "Serveur: réponse vide"
-                    )
+                    showLoading(false)
                 }
 
             } catch (e: Exception) {
 
-                e.printStackTrace()
+                launch(Dispatchers.Main) {
 
-                showErrorMessage(
-                    e.message ?: "Erreur inconnue"
-                )
-            } finally {
-
-                showLoading(false)
+                    showErrorMessage(e.message ?: "Erreur inconnue")
+                    showLoading(false)
+                }
             }
         }
     }
 
     private fun saveUserData(response: AuthResponse) {
 
-        val prefs =
-            getSharedPreferences(
-                "AircraftWarPro",
-                MODE_PRIVATE
-            )
+        val prefs = getSharedPreferences(
+            "AircraftWarPro",
+            MODE_PRIVATE
+        )
 
         prefs.edit().apply {
 
@@ -141,10 +130,8 @@ class LoginActivity : AppCompatActivity() {
 
         Toast.makeText(
             this,
-            if (isRegister)
-                "Inscription réussie"
-            else
-                "Connexion réussie",
+            if (isRegister) "Inscription réussie"
+            else "Connexion réussie",
             Toast.LENGTH_SHORT
         ).show()
     }
