@@ -19,7 +19,8 @@ class ApiService {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    private val baseUrl = "https://aircraft-war-serveur.onrender.com/api
+    // ✅ URL CORRECTE
+    private val baseUrl = "https://aircraft-war-serveur.onrender.com/api"
 
     suspend fun register(username: String): AuthResponse? {
         return try {
