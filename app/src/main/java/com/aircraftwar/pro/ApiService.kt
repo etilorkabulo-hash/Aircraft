@@ -20,7 +20,7 @@ class ApiService {
         .build()
 
     // ✅ URL CORRECTE
-    private val baseUrl = "https://aircraft-war-serveur.onrender.com/api"
+    private val baseUrl = "http://aircraft-war-serveur.onrender.com/api"
 
     suspend fun register(username: String): AuthResponse? {
         return try {
