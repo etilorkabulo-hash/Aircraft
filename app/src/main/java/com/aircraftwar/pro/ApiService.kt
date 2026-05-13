@@ -27,21 +27,13 @@ class ApiService {
     // AUTH
     // =========================
 
-    suspend fun register(
-        username: String
-    ): AuthResponse? {
+    suspend fun register(username: String): AuthResponse? {
 
         return try {
 
-            val cleanUsername =
-                username.trim()
+            val cleanUsername = username.trim()
 
-            if (cleanUsername.length < 3) {
-
-                throw Exception(
-                    "Le pseudo doit contenir au moins 3 caractères"
-                )
-            }
+            Log.d("DEBUG_USERNAME", cleanUsername)
 
             val json = JSONObject().apply {
                 put("username", cleanUsername)
@@ -57,60 +49,36 @@ class ApiService {
                 )
                 .build()
 
-            val response =
-                client.newCall(request).execute()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
 
-            val bodyString =
-                response.body?.string()
+            Log.d("REGISTER_CODE", response.code.toString())
+            Log.d("REGISTER_BODY", body ?: "null")
 
-            Log.d(
-                "REGISTER_CODE",
-                response.code.toString()
-            )
-
-            Log.d(
-                "REGISTER_BODY",
-                bodyString ?: "null"
-            )
-
-            if (response.isSuccessful) {
-
-                if (bodyString == null) {
-
-                    throw Exception(
-                        "Réponse vide du serveur"
-                    )
-                }
-
-                val jsonResponse =
-                    JSONObject(bodyString)
-
-                AuthResponse(
-                    jsonResponse.getString("playerId"),
-                    jsonResponse.getString("username")
-                )
-
-            } else {
-
-                throw Exception(
-                    "Erreur ${response.code} : $bodyString"
-                )
+            if (!response.isSuccessful) {
+                throw Exception("HTTP ${response.code} : $body")
             }
+
+            if (body == null) {
+                throw Exception("Réponse vide serveur")
+            }
+
+            val jsonResponse = JSONObject(body)
+
+            return AuthResponse(
+                jsonResponse.getString("playerId"),
+                jsonResponse.getString("username")
+            )
 
         } catch (e: Exception) {
 
-            e.printStackTrace()
+            Log.e("REGISTER_ERROR", e.toString())
 
-            throw Exception(
-                e.message ?: "Erreur inconnue"
-            )
+            throw Exception("REGISTER ERROR: $e")
         }
     }
 
-    suspend fun login(
-        username: String
-    ): AuthResponse? {
-
+    suspend fun login(username: String): AuthResponse? {
         return register(username)
     }
 
@@ -118,15 +86,11 @@ class ApiService {
     // SCORE
     // =========================
 
-    suspend fun sendScore(
-        playerId: String,
-        score: Int
-    ): Boolean {
+    suspend fun sendScore(playerId: String, score: Int): Boolean {
 
         return try {
 
             val json = JSONObject().apply {
-
                 put("playerId", playerId)
                 put("score", score)
             }
@@ -135,33 +99,19 @@ class ApiService {
                 .url("$baseUrl/score")
                 .post(
                     json.toString().toRequestBody(
-                        "application/json"
-                            .toMediaType()
+                        "application/json".toMediaType()
                     )
                 )
                 .build()
 
-            val response =
-                client.newCall(request).execute()
+            val response = client.newCall(request).execute()
 
-            val bodyString =
-                response.body?.string()
-
-            Log.d(
-                "SCORE_CODE",
-                response.code.toString()
-            )
-
-            Log.d(
-                "SCORE_BODY",
-                bodyString ?: "null"
-            )
+            Log.d("SCORE_CODE", response.code.toString())
 
             response.isSuccessful
 
         } catch (e: Exception) {
-
-            e.printStackTrace()
+            Log.e("SCORE_ERROR", e.toString())
             false
         }
     }
@@ -170,8 +120,7 @@ class ApiService {
     // LEADERBOARD
     // =========================
 
-    suspend fun getLeaderboard():
-            List<Map<String, Any>>? {
+    suspend fun getLeaderboard(): List<Map<String, Any>>? {
 
         return try {
 
@@ -180,74 +129,46 @@ class ApiService {
                 .get()
                 .build()
 
-            val response =
-                client.newCall(request).execute()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
 
-            val bodyString =
-                response.body?.string()
+            Log.d("LEADERBOARD_CODE", response.code.toString())
+            Log.d("LEADERBOARD_BODY", body ?: "null")
 
-            Log.d(
-                "LEADERBOARD_CODE",
-                response.code.toString()
-            )
+            if (!response.isSuccessful || body == null) return null
 
-            Log.d(
-                "LEADERBOARD_BODY",
-                bodyString ?: "null"
-            )
+            val jsonArray =
+                JSONObject(body).getJSONArray("leaderboard")
 
-            if (
-                response.isSuccessful &&
-                bodyString != null
-            ) {
+            val list = mutableListOf<Map<String, Any>>()
 
-                val jsonArray =
-                    JSONObject(bodyString)
-                        .getJSONArray("leaderboard")
+            for (i in 0 until jsonArray.length()) {
 
-                val leaderboard =
-                    mutableListOf<Map<String, Any>>()
+                val item = jsonArray.getJSONObject(i)
 
-                for (i in 0 until jsonArray.length()) {
-
-                    val item =
-                        jsonArray.getJSONObject(i)
-
-                    leaderboard.add(
-                        mapOf(
-                            "playerId" to
-                                    item.getString("playerId"),
-
-                            "username" to
-                                    item.getString("username"),
-
-                            "score" to
-                                    item.getInt("score")
-                        )
+                list.add(
+                    mapOf(
+                        "playerId" to item.getString("playerId"),
+                        "username" to item.getString("username"),
+                        "score" to item.getInt("score")
                     )
-                }
-
-                leaderboard
-
-            } else {
-
-                null
+                )
             }
+
+            list
 
         } catch (e: Exception) {
 
-            e.printStackTrace()
+            Log.e("LEADERBOARD_ERROR", e.toString())
             null
         }
     }
 
     // =========================
-    // MATCHMAKING
+    // MATCH
     // =========================
 
-    suspend fun joinMatch(
-        playerId: String
-    ): String? {
+    suspend fun joinMatch(playerId: String): String? {
 
         return try {
 
@@ -259,159 +180,24 @@ class ApiService {
                 .url("$baseUrl/match/join")
                 .post(
                     json.toString().toRequestBody(
-                        "application/json"
-                            .toMediaType()
+                        "application/json".toMediaType()
                     )
                 )
                 .build()
 
-            val response =
-                client.newCall(request).execute()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
 
-            val bodyString =
-                response.body?.string()
+            Log.d("MATCH_CODE", response.code.toString())
+            Log.d("MATCH_BODY", body ?: "null")
 
-            Log.d(
-                "MATCH_CODE",
-                response.code.toString()
-            )
+            if (!response.isSuccessful || body == null) return null
 
-            Log.d(
-                "MATCH_BODY",
-                bodyString ?: "null"
-            )
-
-            if (
-                response.isSuccessful &&
-                bodyString != null
-            ) {
-
-                JSONObject(bodyString)
-                    .getString("matchId")
-
-            } else {
-
-                null
-            }
+            JSONObject(body).getString("matchId")
 
         } catch (e: Exception) {
 
-            e.printStackTrace()
-            null
-        }
-    }
-
-    suspend fun sendMatchScore(
-        matchId: String,
-        playerId: String,
-        score: Int
-    ): Boolean {
-
-        return try {
-
-            val json = JSONObject().apply {
-
-                put("matchId", matchId)
-                put("playerId", playerId)
-                put("score", score)
-            }
-
-            val request = Request.Builder()
-                .url("$baseUrl/match/score")
-                .post(
-                    json.toString().toRequestBody(
-                        "application/json"
-                            .toMediaType()
-                    )
-                )
-                .build()
-
-            val response =
-                client.newCall(request).execute()
-
-            val bodyString =
-                response.body?.string()
-
-            Log.d(
-                "MATCH_SCORE_CODE",
-                response.code.toString()
-            )
-
-            Log.d(
-                "MATCH_SCORE_BODY",
-                bodyString ?: "null"
-            )
-
-            response.isSuccessful
-
-        } catch (e: Exception) {
-
-            e.printStackTrace()
-            false
-        }
-    }
-
-    suspend fun getMatchResult(
-        matchId: String
-    ): Map<String, Any>? {
-
-        return try {
-
-            val request = Request.Builder()
-                .url("$baseUrl/match/result/$matchId")
-                .get()
-                .build()
-
-            val response =
-                client.newCall(request).execute()
-
-            val bodyString =
-                response.body?.string()
-
-            Log.d(
-                "MATCH_RESULT_CODE",
-                response.code.toString()
-            )
-
-            Log.d(
-                "MATCH_RESULT_BODY",
-                bodyString ?: "null"
-            )
-
-            if (
-                response.isSuccessful &&
-                bodyString != null
-            ) {
-
-                val jsonResponse =
-                    JSONObject(bodyString)
-
-                mapOf(
-
-                    "matchId" to
-                            jsonResponse.getString("matchId"),
-
-                    "winner" to
-                            jsonResponse.getString("winner"),
-
-                    "loser" to
-                            jsonResponse.getString("loser"),
-
-                    "winnerScore" to
-                            jsonResponse.getInt("winnerScore"),
-
-                    "loserScore" to
-                            jsonResponse.getInt("loserScore")
-                )
-
-            } else {
-
-                null
-            }
-
-        } catch (e: Exception) {
-
-            e.printStackTrace()
+            Log.e("MATCH_ERROR", e.toString())
             null
         }
     }
