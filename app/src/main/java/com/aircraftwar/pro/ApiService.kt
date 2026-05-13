@@ -1,145 +1,177 @@
 package com.aircraftwar.pro
 
-import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaType
 import org.json.JSONObject
-import java.io.IOException
+import java.util.concurrent.TimeUnit
+
+data class AuthResponse(
+    val playerId: String,
+    val username: String
+)
 
 class ApiService {
 
-    private val client = OkHttpClient()
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     private val baseUrl = "https://aircraft-war-server.onrender.com"
 
-    /**
-     * 🔐 REGISTER
-     */
-    fun register(name: String, callback: (String) -> Unit) {
-
-        val json = JSONObject()
-        json.put("name", name)
-
-        val body = json.toString()
-            .toRequestBody("application/json".toMediaType())
-
-        val request = Request.Builder()
-            .url("$baseUrl/register")
-            .post(body)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
+    suspend fun register(username: String): AuthResponse? {
+        return try {
+            val json = JSONObject().apply {
+                put("username", username)
             }
 
-            override fun onResponse(call: Call, response: Response) {
+            val request = Request.Builder()
+                .url("$baseUrl/player")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .build()
 
-                val result = response.body?.string()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val body = response.body?.string() ?: return null
+                val jsonResponse = JSONObject(body)
+                AuthResponse(
+                    jsonResponse.getString("playerId"),
+                    jsonResponse.getString("username")
+                )
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 
-                if (result != null) {
-                    val jsonResponse = JSONObject(result)
-                    val id = jsonResponse.getString("id")
+    suspend fun login(username: String): AuthResponse? {
+        return register(username)
+    }
 
-                    callback(id)
+    suspend fun sendScore(playerId: String, score: Int): Boolean {
+        return try {
+            val json = JSONObject().apply {
+                put("playerId", playerId)
+                put("score", score)
+            }
+
+            val request = Request.Builder()
+                .url("$baseUrl/score")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            val response = client.newCall(request).execute()
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun getLeaderboard(): List<Map<String, Any>>? {
+        return try {
+            val request = Request.Builder()
+                .url("$baseUrl/leaderboard")
+                .get()
+                .build()
+
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val body = response.body?.string() ?: return null
+                val jsonArray = JSONObject(body).getJSONArray("leaderboard")
+                val leaderboard = mutableListOf<Map<String, Any>>()
+                for (i in 0 until jsonArray.length()) {
+                    val item = jsonArray.getJSONObject(i)
+                    leaderboard.add(mapOf(
+                        "playerId" to item.getString("playerId"),
+                        "username" to item.getString("username"),
+                        "score" to item.getInt("score")
+                    ))
                 }
-
-                response.close()
+                leaderboard
+            } else {
+                null
             }
-        })
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
-    /**
-     * 🔐 LOGIN
-     */
-    fun login(name: String, callback: (String) -> Unit) {
-
-        val json = JSONObject()
-        json.put("name", name)
-
-        val body = json.toString()
-            .toRequestBody("application/json".toMediaType())
-
-        val request = Request.Builder()
-            .url("$baseUrl/login")
-            .post(body)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
+    suspend fun joinMatch(playerId: String): String? {
+        return try {
+            val json = JSONObject().apply {
+                put("playerId", playerId)
             }
 
-            override fun onResponse(call: Call, response: Response) {
+            val request = Request.Builder()
+                .url("$baseUrl/match/join")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .build()
 
-                val result = response.body?.string()
-
-                if (result != null) {
-                    val jsonResponse = JSONObject(result)
-                    val id = jsonResponse.getString("id")
-
-                    callback(id)
-                }
-
-                response.close()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val body = response.body?.string() ?: return null
+                JSONObject(body).getString("matchId")
+            } else {
+                null
             }
-        })
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
-    /**
-     * 🏆 SCORE
-     */
-    fun sendScore(id: String, score: Int) {
-
-        val json = JSONObject()
-        json.put("id", id)
-        json.put("score", score)
-
-        val body = json.toString()
-            .toRequestBody("application/json".toMediaType())
-
-        val request = Request.Builder()
-            .url("$baseUrl/score")
-            .post(body)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
+    suspend fun sendMatchScore(matchId: String, playerId: String, score: Int): Boolean {
+        return try {
+            val json = JSONObject().apply {
+                put("matchId", matchId)
+                put("playerId", playerId)
+                put("score", score)
             }
 
-            override fun onResponse(call: Call, response: Response) {
-                response.close()
-            }
-        })
+            val request = Request.Builder()
+                .url("$baseUrl/match/score")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            val response = client.newCall(request).execute()
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 
-    /**
-     * 📊 LEADERBOARD
-     */
-    fun getLeaderboard(callback: (String) -> Unit) {
+    suspend fun getMatchResult(matchId: String): Map<String, Any>? {
+        return try {
+            val request = Request.Builder()
+                .url("$baseUrl/match/result/$matchId")
+                .get()
+                .build()
 
-        val request = Request.Builder()
-            .url("$baseUrl/leaderboard")
-            .get()
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val body = response.body?.string() ?: return null
+                val jsonResponse = JSONObject(body)
+                mapOf(
+                    "matchId" to jsonResponse.getString("matchId"),
+                    "winner" to jsonResponse.getString("winner"),
+                    "loser" to jsonResponse.getString("loser"),
+                    "winnerScore" to jsonResponse.getInt("winnerScore"),
+                    "loserScore" to jsonResponse.getInt("loserScore")
+                )
+            } else {
+                null
             }
-
-            override fun onResponse(call: Call, response: Response) {
-
-                val result = response.body?.string()
-                response.close()
-
-                callback(result ?: "[]")
-            }
-        })
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 }
