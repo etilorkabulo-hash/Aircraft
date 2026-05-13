@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Aircraft War Pro</string>
-    <string name="game_title">Aircraft War Pro</string>
-    <string name="start_game">Start Game</string>
-    <string name="game_over">Game Over</string>
-    <string name="score">Score</string>
-    <string name="level">Level</string>
-    <string name="high_score">High Score</string>
-    <string name="resume">Resume</string>
-    <string name="quit">Quit</string>
+    <string name="app_logo">Logo</string>
+    <string name="back">Retour</string>
+    <string name="play">Jouer</string>
+    <string name="leaderboard">Classement</string>
+    <string name="competition">Compétition</string>
+    <string name="settings">Paramètres</string>
+    <string name="register">S\'inscrire</string>
+    <string name="login">Se connecter</string>
+    <string name="username_hint">Pseudonyme</string>
+    <string name="welcome">Bienvenue</string>
 </resources>
