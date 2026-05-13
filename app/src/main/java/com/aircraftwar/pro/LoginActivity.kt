@@ -22,6 +22,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var apiService: ApiService
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_login)
@@ -34,31 +35,24 @@ class LoginActivity : AppCompatActivity() {
 
     private fun initializeViews() {
 
-        usernameInput =
-            findViewById(R.id.username_input)
-
-        registerBtn =
-            findViewById(R.id.register_btn)
-
-        loginBtn =
-            findViewById(R.id.login_btn)
-
-        loadingProgressBar =
-            findViewById(R.id.loading_progress)
+        usernameInput = findViewById(R.id.username_input)
+        registerBtn = findViewById(R.id.register_btn)
+        loginBtn = findViewById(R.id.login_btn)
+        loadingProgressBar = findViewById(R.id.loading_progress)
     }
 
     private fun setupClickListeners() {
 
         registerBtn.setOnClickListener {
-            handleRegister()
+            handleAuth(isRegister = true)
         }
 
         loginBtn.setOnClickListener {
-            handleLogin()
+            handleAuth(isRegister = false)
         }
     }
 
-    private fun handleRegister() {
+    private fun handleAuth(isRegister: Boolean) {
 
         val username =
             usernameInput.text.toString().trim()
@@ -66,36 +60,13 @@ class LoginActivity : AppCompatActivity() {
         if (!validateInput(username)) {
 
             showErrorMessage(
-                "Le pseudo doit contenir au moins 3 caractères"
+                "Pseudo invalide (3 à 20 caractères)"
             )
 
             return
         }
 
-        performAuthAction(
-            username = username,
-            isRegister = true
-        )
-    }
-
-    private fun handleLogin() {
-
-        val username =
-            usernameInput.text.toString().trim()
-
-        if (!validateInput(username)) {
-
-            showErrorMessage(
-                "Le pseudo doit contenir au moins 3 caractères"
-            )
-
-            return
-        }
-
-        performAuthAction(
-            username = username,
-            isRegister = false
-        )
+        performAuth(username, isRegister)
     }
 
     private fun validateInput(username: String): Boolean {
@@ -105,7 +76,7 @@ class LoginActivity : AppCompatActivity() {
                 && username.length <= 20
     }
 
-    private fun performAuthAction(
+    private fun performAuth(
         username: String,
         isRegister: Boolean
     ) {
@@ -117,20 +88,20 @@ class LoginActivity : AppCompatActivity() {
             try {
 
                 val response =
-                    apiService.register(username)
+                    apiService.register(username) // OK pour l'instant (backend simple)
 
                 if (response != null) {
 
                     saveUserData(response)
 
-                    showSuccessMessage(isRegister)
+                    showSuccess(isRegister)
 
                     navigateToMenu()
 
                 } else {
 
                     showErrorMessage(
-                        "Réponse vide du serveur"
+                        "Serveur: réponse vide"
                     )
                 }
 
@@ -139,10 +110,8 @@ class LoginActivity : AppCompatActivity() {
                 e.printStackTrace()
 
                 showErrorMessage(
-                    e.message
-                        ?: "Erreur inconnue"
+                    e.message ?: "Erreur inconnue"
                 )
-
             } finally {
 
                 showLoading(false)
@@ -150,9 +119,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveUserData(
-        response: AuthResponse
-    ) {
+    private fun saveUserData(response: AuthResponse) {
 
         val prefs =
             getSharedPreferences(
@@ -162,64 +129,39 @@ class LoginActivity : AppCompatActivity() {
 
         prefs.edit().apply {
 
-            putString(
-                "playerId",
-                response.playerId
-            )
-
-            putString(
-                "username",
-                response.username
-            )
-
-            putLong(
-                "lastLoginTime",
-                System.currentTimeMillis()
-            )
+            putString("playerId", response.playerId)
+            putString("username", response.username)
+            putLong("lastLoginTime", System.currentTimeMillis())
 
             apply()
         }
     }
 
-    private fun showSuccessMessage(
-        isRegister: Boolean
-    ) {
-
-        val message =
-            if (isRegister) {
-                "Inscription réussie !"
-            } else {
-                "Connexion réussie !"
-            }
+    private fun showSuccess(isRegister: Boolean) {
 
         Toast.makeText(
             this,
-            message,
+            if (isRegister)
+                "Inscription réussie"
+            else
+                "Connexion réussie",
             Toast.LENGTH_SHORT
         ).show()
     }
 
-    private fun showErrorMessage(
-        message: String
-    ) {
+    private fun showErrorMessage(message: String) {
 
         Toast.makeText(
             this,
-            message,
+            "ERROR: $message",
             Toast.LENGTH_LONG
         ).show()
     }
 
-    private fun showLoading(
-        isLoading: Boolean
-    ) {
+    private fun showLoading(isLoading: Boolean) {
 
         loadingProgressBar.visibility =
-            if (isLoading) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
+            if (isLoading) View.VISIBLE else View.GONE
 
         registerBtn.isEnabled = !isLoading
         loginBtn.isEnabled = !isLoading
@@ -228,10 +170,7 @@ class LoginActivity : AppCompatActivity() {
     private fun navigateToMenu() {
 
         startActivity(
-            Intent(
-                this,
-                MenuActivity::class.java
-            )
+            Intent(this, MenuActivity::class.java)
         )
 
         overridePendingTransition(
