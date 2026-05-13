@@ -2,51 +2,36 @@ package com.aircraftwar.pro
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.animation.AnimationUtils
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import android.widget.Button
 
-class MenuActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity() {
 
-    private lateinit var playerId: String
-    private val api = ApiService()
+    private lateinit var logoImageView: ImageView
+    private lateinit var titleTextView: TextView
+    private lateinit var subtitleTextView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-        setContentView(R.layout.activity_menu)
+        logoImageView = findViewById(R.id.logo_image)
+        titleTextView = findViewById(R.id.title_text)
+        subtitleTextView = findViewById(R.id.subtitle_text)
 
-        playerId = intent.getStringExtra("playerId") ?: ""
+        // Animations
+        val fadeInAnimation = AnimationUtils.loadAnimation(this, android.R.anim.fade_in)
+        fadeInAnimation.duration = 800
+        logoImageView.startAnimation(fadeInAnimation)
+        titleTextView.startAnimation(fadeInAnimation)
 
-        val playBtn = findViewById<Button>(R.id.playBtn)
-        val leaderboardBtn = findViewById<Button>(R.id.leaderboardBtn)
-        val competitionBtn = findViewById<Button>(R.id.competitionBtn)
-        val settingsBtn = findViewById<Button>(R.id.settingsBtn)
-
-        // 🎮 JOUER
-        playBtn.setOnClickListener {
-            val intent = Intent(this, GameActivity::class.java)
-            intent.putExtra("playerId", playerId)
-            startActivity(intent)
-        }
-
-        // 🏆 CLASSEMENT
-        leaderboardBtn.setOnClickListener {
-            val intent = Intent(this, LeaderboardActivity::class.java)
-            intent.putExtra("playerId", playerId)
-            startActivity(intent)
-        }
-
-        // ⚔️ COMPÉTITION
-        competitionBtn.setOnClickListener {
-            val intent = Intent(this, CompetitionActivity::class.java)
-            intent.putExtra("playerId", playerId)
-            startActivity(intent)
-        }
-
-        // ⚙️ PARAMÈTRES
-        settingsBtn.setOnClickListener {
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivity(intent)
-        }
+        // Redirection apr��s 3 secondes
+        window.decorView.postDelayed({
+            startActivity(Intent(this, LoginActivity::class.java))
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+            finish()
+        }, 3000)
     }
 }
