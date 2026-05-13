@@ -2,57 +2,122 @@ package com.aircraftwar.pro
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.TextUtils
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import android.widget.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
 
-    private val api = ApiService()
+    private lateinit var usernameInput: EditText
+    private lateinit var registerBtn: Button
+    private lateinit var loginBtn: Button
+    private lateinit var loadingProgressBar: ProgressBar
+    private lateinit var apiService: ApiService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContentView(R.layout.activity_login)
 
-        val nameInput = findViewById<EditText>(R.id.nameInput)
-        val registerBtn = findViewById<Button>(R.id.registerBtn)
-        val loginBtn = findViewById<Button>(R.id.loginBtn)
+        initializeViews()
+        setupClickListeners()
+        apiService = ApiService()
+    }
 
-        registerBtn.setOnClickListener {
+    private fun initializeViews() {
+        usernameInput = findViewById(R.id.username_input)
+        registerBtn = findViewById(R.id.register_btn)
+        loginBtn = findViewById(R.id.login_btn)
+        loadingProgressBar = findViewById(R.id.loading_progress)
+    }
 
-            val name = nameInput.text.toString()
+    private fun setupClickListeners() {
+        registerBtn.setOnClickListener { handleRegister() }
+        loginBtn.setOnClickListener { handleLogin() }
+    }
 
-            api.register(name) { id ->
+    private fun handleRegister() {
+        val username = usernameInput.text.toString().trim()
 
-                runOnUiThread {
-                    startGame(id)
-                }
-            }
+        if (!validateInput(username)) {
+            Toast.makeText(this, "Veuillez entrer un nom d'utilisateur valide", Toast.LENGTH_SHORT).show()
+            return
         }
 
-        loginBtn.setOnClickListener {
+        performAuthAction(username, isRegister = true)
+    }
 
-            val name = nameInput.text.toString()
+    private fun handleLogin() {
+        val username = usernameInput.text.toString().trim()
 
-            api.login(name) { id ->
+        if (!validateInput(username)) {
+            Toast.makeText(this, "Veuillez entrer un nom d'utilisateur valide", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-                runOnUiThread {
-                    startGame(id)
+        performAuthAction(username, isRegister = false)
+    }
+
+    private fun validateInput(username: String): Boolean {
+        return !TextUtils.isEmpty(username) && username.length >= 3
+    }
+
+    private fun performAuthAction(username: String, isRegister: Boolean) {
+        showLoading(true)
+
+        GlobalScope.launch(Dispatchers.Main) {
+            try {
+                val response = apiService.register(username)
+                
+                if (response != null) {
+                    saveUserData(response)
+                    showSuccessMessage(isRegister)
+                    navigateToMenu()
+                } else {
+                    showErrorMessage("Erreur de connexion au serveur")
                 }
+            } catch (e: Exception) {
+                showErrorMessage("Erreur: ${e.message}")
+            } finally {
+                showLoading(false)
             }
         }
     }
 
-    /**
-     * 🎮 Lancer le jeu avec ID joueur
-     */
-    private fun startGame(playerId: String) {
+    private fun saveUserData(response: AuthResponse) {
+        val prefs = getSharedPreferences("AircraftWarPro", MODE_PRIVATE)
+        prefs.edit().apply {
+            putString("playerId", response.playerId)
+            putString("username", response.username)
+            putLong("lastLoginTime", System.currentTimeMillis())
+            apply()
+        }
+    }
 
-        val intent = Intent(this, GameActivity::class.java)
+    private fun showSuccessMessage(isRegister: Boolean) {
+        val message = if (isRegister) "Inscription réussie!" else "Connexion réussie!"
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
 
-        intent.putExtra("playerId", playerId)
+    private fun showErrorMessage(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
 
-        startActivity(intent)
+    private fun showLoading(isLoading: Boolean) {
+        loadingProgressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        registerBtn.isEnabled = !isLoading
+        loginBtn.isEnabled = !isLoading
+    }
+
+    private fun navigateToMenu() {
+        startActivity(Intent(this, MenuActivity::class.java))
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         finish()
     }
 }
