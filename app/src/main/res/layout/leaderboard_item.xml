@@ -1,36 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/gradient_bg">
-
-    <ImageButton
-        android:id="@+id/back_btn"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:src="@drawable/ic_back"
-        android:background="?attr/selectableItemBackground"
-        android:layout_margin="15dp"
-        android:contentDescription="@string/back" />
+    android:layout_height="70dp"
+    android:background="@drawable/leaderboard_item_bg"
+    android:orientation="horizontal"
+    android:padding="15dp"
+    android:layout_margin="8dp">
 
     <TextView
-        android:id="@+id/title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="🏆 CLASSEMENT MONDIAL"
-        android:textSize="32sp"
-        android:textColor="@color/white"
-        android:textStyle="bold"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp" />
-
-    <ListView
-        android:id="@+id/leaderboard_list"
-        android:layout_width="match_parent"
+        android:id="@+id/rank_text"
+        android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_below="@id/title"
-        android:layout_marginTop="20dp"
-        android:divider="@color/dark_gray"
-        android:dividerHeight="8dp" />
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textColor="@color/gold"
+        android:textSize="22sp"
+        android:textStyle="bold" />
 
-</RelativeLayout>
+    <TextView
+        android:id="@+id/username_text"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
+        android:gravity="center_vertical"
+        android:textColor="@color/cyan"
+        android:textSize="18sp"
+        android:paddingStart="15dp" />
+
+    <TextView
+        android:id="@+id/score_text"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textColor="@color/green"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+</LinearLayout>
